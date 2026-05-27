@@ -28,7 +28,7 @@
 #pragma once
 
 // Convenience header — includes the full cdcommons public API.
+#include <cdcommons/time/rational.hpp>
 // Uncomment sub-headers as implementations are added:
-//   #include <cdcommons/time/rational.hpp>   boost-free exact rational time  (bead 8o8)
-//   #include <cdcommons/time/rsfp.hpp>       Rational-Scaled Floating Point  (bead uel)
-//   #include <cdcommons/time/mbfp.hpp>       Multi-Base Floating Point       (bead coc)
+//   #include <cdcommons/time/rsfp.hpp>   Rational-Scaled Floating Point  (bead uel)
+//   #include <cdcommons/time/mbfp.hpp>   Multi-Base Floating Point       (bead coc)
