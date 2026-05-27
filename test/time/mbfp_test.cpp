@@ -2,6 +2,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <cdcommons/time/mbfp.hpp>
 #include <limits>
+#include <stdexcept>
 
 // Decimal milliseconds: 1 ms = 1 × 10^-3 s
 using MS = cdcommons::time::mbfp<10, -3>;
@@ -150,6 +151,22 @@ TEST_CASE("mbfp_agree: infinity is preserved under conversion", "[mbfp][agree]")
     auto inf_ms = std::numeric_limits<MS>::infinity();
     auto converted = Agree::convert_first(inf_ms);
     REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
+}
+
+// scale1/scale2 overflow is a compile-time error — verified here by confirming that
+// a valid agreement compiles and produces the expected scale values.
+TEST_CASE("mbfp_agree: scale factors are correct compile-time constants", "[mbfp][agree]") {
+    using Agree = cdcommons::time::mbfp_agree<MS, NS>;
+    // scale1: convert ms(base=10,exp=-3) → ns(base=10,exp=-9): factor = 10^6
+    REQUIRE(Agree::scale1 == 1000000L);
+    // scale2: convert ns(base=10,exp=-9) → ns(base=10,exp=-9): factor = 1
+    REQUIRE(Agree::scale2 == 1L);
+
+    using Agree2 = cdcommons::time::mbfp_agree<MS, BIN10>;
+    // scale1: ms(10,-3) → common(10,-10): (10/10)^3 × 10^7 = 1 × 10^7
+    REQUIRE(Agree2::scale1 == 10000000L);
+    // scale2: bin(2,-10) → common(10,-10): (10/2)^10 × 10^0 = 5^10
+    REQUIRE(Agree2::scale2 == 9765625L);
 }
 
 // MBFP vs rational: MBFP covers numbers rational cannot (with fixed Int width)

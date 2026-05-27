@@ -31,15 +31,19 @@
 #include <concepts>
 #include <limits>
 #include <numeric>
+#include <stdexcept>
 
 namespace cdcommons::time {
 
     namespace detail {
-        // Integer power: base^exp, exp >= 0. Caller must ensure no overflow.
-        template <std::signed_integral Int> constexpr Int ipow(Int base, int exp) noexcept {
+        template <std::signed_integral Int> constexpr Int ipow(Int base, int exp) {
             Int r = Int(1);
-            for (int i = 0; i < exp; ++i)
+            for (int i = 0; i < exp; ++i) {
+                if (base > Int(1) && r > std::numeric_limits<Int>::max() / base)
+                    throw std::overflow_error(
+                        "cdcommons::time::mbfp: scale factor overflow — use a wider Int type");
                 r *= base;
+            }
             return r;
         }
     } // namespace detail
@@ -127,26 +131,34 @@ namespace cdcommons::time {
         static constexpr int common_exp = (E1 < E2) ? E1 : E2;
         using type = mbfp<common_base, common_exp, Int>;
 
+      private:
+        // Declared before scale1/scale2 so the initializers find it (GCC requires this).
+        // Computes: (common_base/B)^|E| × common_base^(|common_exp|−|E|)
+        // Throws std::overflow_error if the result exceeds Int — surfaced at compile time
+        // because scale1/scale2 below are static constexpr.
+        static constexpr Int scale_factor(int B, int E) {
+            const int abs_e = -E;
+            const int abs_ce = -common_exp;
+            const Int k = Int(common_base) / Int(B);
+            return detail::ipow(k, abs_e) * detail::ipow(Int(common_base), abs_ce - abs_e);
+        }
+
+      public:
+        // Evaluated at compile time. If the scale factor overflows Int, the
+        // instantiation fails here — not mid-simulation.
+        static constexpr Int scale1 = scale_factor(B1, E1);
+        static constexpr Int scale2 = scale_factor(B2, E2);
+
         static constexpr type convert_first(mbfp<B1, E1, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
-            return type(v.mantissa_ * scale_factor(B1, E1));
+            return type(v.mantissa_ * scale1);
         }
 
         static constexpr type convert_second(mbfp<B2, E2, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
-            return type(v.mantissa_ * scale_factor(B2, E2));
-        }
-
-      private:
-        // Computes: (common_base/B)^|E| × common_base^(|common_exp|−|E|)
-        // Exact integer since B | common_base and |common_exp| >= |E|.
-        static constexpr Int scale_factor(int B, int E) noexcept {
-            const int abs_e = -E;
-            const int abs_ce = -common_exp;
-            const Int k = Int(common_base) / Int(B);
-            return detail::ipow(k, abs_e) * detail::ipow(Int(common_base), abs_ce - abs_e);
+            return type(v.mantissa_ * scale2);
         }
     };
 
