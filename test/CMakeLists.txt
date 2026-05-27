@@ -1,0 +1,3 @@
+add_executable(cdcommons_smoke_test smoke_test.cpp)
+target_link_libraries(cdcommons_smoke_test PRIVATE cdcommons Catch2::Catch2WithMain)
+add_test(NAME cdcommons_smoke_test COMMAND cdcommons_smoke_test)
