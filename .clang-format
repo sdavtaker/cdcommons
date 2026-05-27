@@ -1,0 +1,10 @@
+BasedOnStyle: LLVM
+Language: Cpp
+ColumnLimit: 100
+IndentWidth: 4
+TabWidth: 4
+UseTab: Never
+ContinuationIndentWidth: 4
+NamespaceIndentation: All
+SortIncludes: true
+IncludeBlocks: Regroup
