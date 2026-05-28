@@ -13,6 +13,7 @@ using TENTH = cdcommons::time::rsfp<1, 10>;
 using TWO_THIRDS_STEP = cdcommons::time::rsfp<2, 3>;
 
 static const MS ms_inf = std::numeric_limits<MS>::infinity();
+static const MS ms_neg_inf = std::numeric_limits<MS>::neg_infinity();
 
 TEST_CASE("rsfp: default construction is zero", "[rsfp]") {
     MS t;
@@ -62,6 +63,8 @@ TEST_CASE("rsfp: infinity sentinel from numeric_limits", "[rsfp]") {
     REQUIRE(std::numeric_limits<MS>::has_infinity);
     REQUIRE(ms_inf == std::numeric_limits<MS>::infinity());
     REQUIRE(ms_inf.mantissa() == std::numeric_limits<long>::max());
+    REQUIRE(ms_neg_inf == std::numeric_limits<MS>::neg_infinity());
+    REQUIRE(ms_neg_inf.mantissa() == std::numeric_limits<long>::min());
 }
 
 TEST_CASE("rsfp: infinity arithmetic propagation", "[rsfp]") {
@@ -70,6 +73,20 @@ TEST_CASE("rsfp: infinity arithmetic propagation", "[rsfp]") {
     REQUIRE(t + ms_inf == ms_inf);
     REQUIRE(ms_inf - t == ms_inf);
     REQUIRE(ms_inf + ms_inf == ms_inf);
+    REQUIRE(ms_neg_inf + t == ms_neg_inf);
+    REQUIRE(t + ms_neg_inf == ms_neg_inf);
+    REQUIRE(ms_neg_inf - t == ms_neg_inf);
+    REQUIRE(ms_neg_inf + ms_neg_inf == ms_neg_inf);
+    // x - (-inf) = +inf; x - (+inf) = -inf
+    REQUIRE(t - ms_neg_inf == ms_inf);
+    REQUIRE(t - ms_inf == ms_neg_inf);
+}
+
+TEST_CASE("rsfp: undefined infinity arithmetic throws domain_error", "[rsfp]") {
+    REQUIRE_THROWS_AS(ms_inf + ms_neg_inf, std::domain_error);
+    REQUIRE_THROWS_AS(ms_neg_inf + ms_inf, std::domain_error);
+    REQUIRE_THROWS_AS(ms_inf - ms_inf, std::domain_error);
+    REQUIRE_THROWS_AS(ms_neg_inf - ms_neg_inf, std::domain_error);
 }
 
 TEST_CASE("rsfp: infinity comparison", "[rsfp]") {
@@ -161,10 +178,11 @@ TEST_CASE("rsfp_agree: large finite mantissa saturates to infinity on conversion
     REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
 }
 
-TEST_CASE("rsfp_agree: very negative mantissa clamps to lowest on conversion", "[rsfp][agree]") {
-    // scale1 = 1000; Int::min()/1000 ≈ -9.2e15; anything below underflows.
+TEST_CASE("rsfp_agree: very negative mantissa saturates to neg_infinity on conversion",
+          "[rsfp][agree]") {
+    // scale1 = 1000; Int::min()/1000 ≈ -9.2e15; anything below underflows to -inf.
     using Agree = cdcommons::time::rsfp_agree<MS, US>;
     MS very_negative(std::numeric_limits<long>::min() / 2L);
     auto converted = Agree::convert_first(very_negative);
-    REQUIRE(converted == std::numeric_limits<Agree::type>::lowest());
+    REQUIRE(converted == std::numeric_limits<Agree::type>::neg_infinity());
 }

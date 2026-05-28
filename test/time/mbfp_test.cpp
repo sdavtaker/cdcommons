@@ -14,6 +14,7 @@ using BIN10 = cdcommons::time::mbfp<2, -10>;
 using BASE3 = cdcommons::time::mbfp<3, -70, long>;
 
 static const MS ms_inf = std::numeric_limits<MS>::infinity();
+static const MS ms_neg_inf = std::numeric_limits<MS>::neg_infinity();
 
 TEST_CASE("mbfp: default construction is zero", "[mbfp]") {
     MS t;
@@ -63,6 +64,8 @@ TEST_CASE("mbfp: infinity sentinel from numeric_limits", "[mbfp]") {
     REQUIRE(std::numeric_limits<MS>::has_infinity);
     REQUIRE(ms_inf.mantissa() == std::numeric_limits<long>::max());
     REQUIRE(ms_inf == std::numeric_limits<MS>::infinity());
+    REQUIRE(ms_neg_inf == std::numeric_limits<MS>::neg_infinity());
+    REQUIRE(ms_neg_inf.mantissa() == std::numeric_limits<long>::min());
 }
 
 TEST_CASE("mbfp: infinity arithmetic propagation", "[mbfp]") {
@@ -71,6 +74,20 @@ TEST_CASE("mbfp: infinity arithmetic propagation", "[mbfp]") {
     REQUIRE(t + ms_inf == ms_inf);
     REQUIRE(ms_inf - t == ms_inf);
     REQUIRE(ms_inf + ms_inf == ms_inf);
+    REQUIRE(ms_neg_inf + t == ms_neg_inf);
+    REQUIRE(t + ms_neg_inf == ms_neg_inf);
+    REQUIRE(ms_neg_inf - t == ms_neg_inf);
+    REQUIRE(ms_neg_inf + ms_neg_inf == ms_neg_inf);
+    // x - (-inf) = +inf; x - (+inf) = -inf
+    REQUIRE(t - ms_neg_inf == ms_inf);
+    REQUIRE(t - ms_inf == ms_neg_inf);
+}
+
+TEST_CASE("mbfp: undefined infinity arithmetic throws domain_error", "[mbfp]") {
+    REQUIRE_THROWS_AS(ms_inf + ms_neg_inf, std::domain_error);
+    REQUIRE_THROWS_AS(ms_neg_inf + ms_inf, std::domain_error);
+    REQUIRE_THROWS_AS(ms_inf - ms_inf, std::domain_error);
+    REQUIRE_THROWS_AS(ms_neg_inf - ms_neg_inf, std::domain_error);
 }
 
 TEST_CASE("mbfp: infinity comparison", "[mbfp]") {
@@ -162,12 +179,13 @@ TEST_CASE("mbfp_agree: large finite mantissa saturates to infinity on conversion
     REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
 }
 
-TEST_CASE("mbfp_agree: very negative mantissa clamps to lowest on conversion", "[mbfp][agree]") {
-    // scale1 = 1000000; Int::min()/1000000 ≈ -9.2e12; anything below underflows.
+TEST_CASE("mbfp_agree: very negative mantissa saturates to neg_infinity on conversion",
+          "[mbfp][agree]") {
+    // scale1 = 1000000; Int::min()/1000000 ≈ -9.2e12; anything below underflows to -inf.
     using Agree = cdcommons::time::mbfp_agree<MS, NS>;
     MS very_negative(std::numeric_limits<long>::min() / 2L);
     auto converted = Agree::convert_first(very_negative);
-    REQUIRE(converted == std::numeric_limits<Agree::type>::lowest());
+    REQUIRE(converted == std::numeric_limits<Agree::type>::neg_infinity());
 }
 
 TEST_CASE("mbfp: addition overflow saturates to infinity", "[mbfp]") {

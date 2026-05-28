@@ -55,8 +55,10 @@ namespace cdcommons::time {
     // Two values of the same type share the same scale-factor and can be
     // directly compared and added without conversion.
     //
-    // Infinity sentinel: { std::numeric_limits<Int>::max() }.
-    // Arithmetic propagates infinity; inf − inf is undefined (never in DEVS).
+    // Sentinels: +∞ = std::numeric_limits<Int>::max()
+    //            −∞ = std::numeric_limits<Int>::min()
+    // Both sentinels propagate through arithmetic.  Addition saturates to +∞ on
+    // positive overflow.  inf ± inf with opposing signs throws std::domain_error.
     //
     // To combine values from two atomic models with different scale-factors,
     // use mbfp_agree<A, B>. Only non-positive exponents are supported for
@@ -74,18 +76,34 @@ namespace cdcommons::time {
 
         constexpr Int mantissa() const noexcept { return mantissa_; }
 
-        constexpr mbfp operator+(const mbfp &rhs) const noexcept {
-            if (is_inf(*this) || is_inf(rhs))
-                return inf_value();
-            // Overflow on non-negative time addition saturates to infinity.
+        constexpr mbfp operator+(const mbfp &rhs) const {
+            if (is_pos_inf(*this) && is_neg_inf(rhs))
+                throw std::domain_error("mbfp: +inf + (-inf) is undefined");
+            if (is_neg_inf(*this) && is_pos_inf(rhs))
+                throw std::domain_error("mbfp: -inf + (+inf) is undefined");
+            if (is_pos_inf(*this) || is_pos_inf(rhs))
+                return pos_inf_value();
+            if (is_neg_inf(*this) || is_neg_inf(rhs))
+                return neg_inf_value();
+            // Positive overflow saturates to +∞.
             if (mantissa_ > Int(0) && rhs.mantissa_ > std::numeric_limits<Int>::max() - mantissa_)
-                return inf_value();
+                return pos_inf_value();
             return mbfp(mantissa_ + rhs.mantissa_);
         }
 
-        constexpr mbfp operator-(const mbfp &rhs) const noexcept {
-            if (is_inf(*this))
-                return inf_value();
+        constexpr mbfp operator-(const mbfp &rhs) const {
+            if (is_pos_inf(*this) && is_pos_inf(rhs))
+                throw std::domain_error("mbfp: +inf - (+inf) is undefined");
+            if (is_neg_inf(*this) && is_neg_inf(rhs))
+                throw std::domain_error("mbfp: -inf - (-inf) is undefined");
+            if (is_pos_inf(*this))
+                return pos_inf_value();
+            if (is_neg_inf(*this))
+                return neg_inf_value();
+            if (is_neg_inf(rhs))
+                return pos_inf_value();
+            if (is_pos_inf(rhs))
+                return neg_inf_value();
             return mbfp(mantissa_ - rhs.mantissa_);
         }
 
@@ -101,13 +119,21 @@ namespace cdcommons::time {
       private:
         Int mantissa_;
 
-        static constexpr bool is_inf(const mbfp &v) noexcept {
+        static constexpr bool is_pos_inf(const mbfp &v) noexcept {
             return v.mantissa_ == std::numeric_limits<Int>::max();
         }
+        static constexpr bool is_neg_inf(const mbfp &v) noexcept {
+            return v.mantissa_ == std::numeric_limits<Int>::min();
+        }
 
-        static constexpr mbfp inf_value() noexcept {
+        static constexpr mbfp pos_inf_value() noexcept {
             mbfp r;
             r.mantissa_ = std::numeric_limits<Int>::max();
+            return r;
+        }
+        static constexpr mbfp neg_inf_value() noexcept {
+            mbfp r;
+            r.mantissa_ = std::numeric_limits<Int>::min();
             return r;
         }
 
@@ -160,20 +186,24 @@ namespace cdcommons::time {
         static constexpr type convert_first(mbfp<B1, E1, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
+            if (v.mantissa_ == std::numeric_limits<Int>::min())
+                return type(std::numeric_limits<Int>::min());
             if (scale1 > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / scale1)
                 return type(std::numeric_limits<Int>::max());
             if (scale1 > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / scale1)
-                return type(std::numeric_limits<Int>::min() + Int(1));
+                return type(std::numeric_limits<Int>::min());
             return type(v.mantissa_ * scale1);
         }
 
         static constexpr type convert_second(mbfp<B2, E2, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
+            if (v.mantissa_ == std::numeric_limits<Int>::min())
+                return type(std::numeric_limits<Int>::min());
             if (scale2 > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / scale2)
                 return type(std::numeric_limits<Int>::max());
             if (scale2 > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / scale2)
-                return type(std::numeric_limits<Int>::min() + Int(1));
+                return type(std::numeric_limits<Int>::min());
             return type(v.mantissa_ * scale2);
         }
     };
@@ -208,6 +238,7 @@ namespace std {
         using T = cdcommons::time::mbfp<Base, Exp, Int>;
 
         static constexpr T infinity() noexcept { return T(numeric_limits<Int>::max()); }
+        static constexpr T neg_infinity() noexcept { return T(numeric_limits<Int>::min()); }
         static constexpr T max() noexcept { return T(numeric_limits<Int>::max() - Int(1)); }
         static constexpr T min() noexcept { return T(Int(1)); }
         static constexpr T lowest() noexcept { return T(numeric_limits<Int>::min() + Int(1)); }
