@@ -30,5 +30,4 @@
 // Convenience header — includes the full cdcommons public API.
 #include <cdcommons/time/mbfp.hpp>
 #include <cdcommons/time/rational.hpp>
-// Uncomment sub-headers as implementations are added:
-//   #include <cdcommons/time/rsfp.hpp>   Rational-Scaled Floating Point  (bead uel)
+#include <cdcommons/time/rsfp.hpp>
