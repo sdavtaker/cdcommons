@@ -151,3 +151,12 @@ TEST_CASE("rsfp_agree: infinity is preserved under conversion", "[rsfp][agree]")
     auto converted = Agree::convert_first(ms_inf);
     REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
 }
+
+TEST_CASE("rsfp_agree: large finite mantissa saturates to infinity on conversion",
+          "[rsfp][agree]") {
+    // scale1 = 1000 (ms → µs); near_max × 1000 overflows long — must saturate.
+    using Agree = cdcommons::time::rsfp_agree<MS, US>;
+    MS near_max = std::numeric_limits<MS>::max();
+    auto converted = Agree::convert_first(near_max);
+    REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
+}

@@ -144,16 +144,27 @@ namespace cdcommons::time {
         static constexpr long scale1 = scale_factor(N1, D1);
         static constexpr long scale2 = scale_factor(N2, D2);
 
+        static_assert(scale1 <= static_cast<long>(std::numeric_limits<Int>::max()),
+                      "rsfp_agree: scale1 overflows Int — use a wider Int type");
+        static_assert(scale2 <= static_cast<long>(std::numeric_limits<Int>::max()),
+                      "rsfp_agree: scale2 overflows Int — use a wider Int type");
+
         static constexpr type convert_first(rsfp<N1, D1, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
-            return type(v.mantissa_ * static_cast<Int>(scale1));
+            constexpr Int s = static_cast<Int>(scale1);
+            if (s > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / s)
+                return type(std::numeric_limits<Int>::max());
+            return type(v.mantissa_ * s);
         }
 
         static constexpr type convert_second(rsfp<N2, D2, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
-            return type(v.mantissa_ * static_cast<Int>(scale2));
+            constexpr Int s = static_cast<Int>(scale2);
+            if (s > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / s)
+                return type(std::numeric_limits<Int>::max());
+            return type(v.mantissa_ * s);
         }
     };
 
