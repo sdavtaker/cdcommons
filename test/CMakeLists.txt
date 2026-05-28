@@ -9,3 +9,7 @@ add_test(NAME cdcommons_rational_test COMMAND cdcommons_rational_test)
 add_executable(cdcommons_mbfp_test time/mbfp_test.cpp)
 target_link_libraries(cdcommons_mbfp_test PRIVATE cdcommons Catch2::Catch2WithMain)
 add_test(NAME cdcommons_mbfp_test COMMAND cdcommons_mbfp_test)
+
+add_executable(cdcommons_rsfp_test time/rsfp_test.cpp)
+target_link_libraries(cdcommons_rsfp_test PRIVATE cdcommons Catch2::Catch2WithMain)
+add_test(NAME cdcommons_rsfp_test COMMAND cdcommons_rsfp_test)
