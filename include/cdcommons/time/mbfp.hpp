@@ -27,26 +27,13 @@
 
 #pragma once
 
+#include <cdcommons/time/detail.hpp>
 #include <compare>
 #include <concepts>
 #include <limits>
-#include <numeric>
 #include <stdexcept>
 
 namespace cdcommons::time {
-
-    namespace detail {
-        template <std::signed_integral Int> constexpr Int ipow(Int base, int exp) {
-            Int r = Int(1);
-            for (int i = 0; i < exp; ++i) {
-                if (base > Int(1) && r > std::numeric_limits<Int>::max() / base)
-                    throw std::overflow_error(
-                        "cdcommons::time::mbfp: scale factor overflow — use a wider Int type");
-                r *= base;
-            }
-            return r;
-        }
-    } // namespace detail
 
     // Multi-Base Floating Point DEVS time type (VWT19, Section 3.2).
     //
@@ -156,43 +143,58 @@ namespace cdcommons::time {
         static_assert(E1 <= 0 && E2 <= 0,
                       "mbfp_agree: both exponents must be <= 0 for exact conversion");
 
-        static constexpr int common_base = std::lcm(B1, B2);
+        // Declared before scale_factor so GCC finds it during constexpr evaluation.
         static constexpr int common_exp = (E1 < E2) ? E1 : E2;
-        using type = mbfp<common_base, common_exp, Int>;
 
       private:
-        // Declared before scale1/scale2 so the initializers find it (GCC requires this).
-        // Computes: (common_base/B)^|E| × common_base^(|common_exp|−|E|)
-        // Throws std::overflow_error if the result exceeds Int — surfaced at compile time
-        // because scale1/scale2 below are static constexpr.
-        static constexpr Int scale_factor(int B, int E) {
+        using W = detail::next_wider_int_t<Int>;
+
+        // Compute lcm in W to avoid int overflow when bases are large.
+        // Declared before scale_factor so GCC finds it during constexpr evaluation.
+        static constexpr W common_base_w_ = detail::lcm_t(static_cast<W>(B1), static_cast<W>(B2));
+        static_assert(common_base_w_ <= static_cast<W>(std::numeric_limits<int>::max()),
+                      "mbfp_agree: common_base overflows int — use smaller base values");
+
+        // Computes (common_base/B)^|E| × common_base^(|common_exp|−|E|) in W.
+        // Throws std::overflow_error if the result exceeds W — surfaced as a
+        // compile-time failure because scale1/scale2 are static constexpr.
+        static constexpr W scale_factor(int B, int E) {
             const int abs_e = -E;
             const int abs_ce = -common_exp;
-            const Int k = Int(common_base) / Int(B);
-            const Int a = detail::ipow(k, abs_e);
-            const Int b = detail::ipow(Int(common_base), abs_ce - abs_e);
-            if (a > Int(1) && b > std::numeric_limits<Int>::max() / a)
+            const W k = common_base_w_ / static_cast<W>(B);
+            const W a = detail::ipow(k, abs_e);
+            const W b = detail::ipow(common_base_w_, abs_ce - abs_e);
+            if (a > W(1) && b > std::numeric_limits<W>::max() / a)
                 throw std::overflow_error(
                     "cdcommons::time::mbfp: scale factor overflow — use a wider Int type");
             return a * b;
         }
 
       public:
-        // Evaluated at compile time. If the scale factor overflows Int, the
+        static constexpr int common_base = static_cast<int>(common_base_w_);
+        using type = mbfp<common_base, common_exp, Int>;
+
+        // Evaluated at compile time. If the scale factor overflows W, the
         // instantiation fails here — not mid-simulation.
-        static constexpr Int scale1 = scale_factor(B1, E1);
-        static constexpr Int scale2 = scale_factor(B2, E2);
+        static constexpr W scale1 = scale_factor(B1, E1);
+        static constexpr W scale2 = scale_factor(B2, E2);
+
+        static_assert(scale1 <= static_cast<W>(std::numeric_limits<Int>::max()),
+                      "mbfp_agree: scale1 overflows Int — use a wider Int type");
+        static_assert(scale2 <= static_cast<W>(std::numeric_limits<Int>::max()),
+                      "mbfp_agree: scale2 overflows Int — use a wider Int type");
 
         static constexpr type convert_first(mbfp<B1, E1, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
             if (v.mantissa_ == std::numeric_limits<Int>::min())
                 return type(std::numeric_limits<Int>::min());
-            if (scale1 > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / scale1)
+            constexpr Int s = static_cast<Int>(scale1);
+            if (s > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / s)
                 return type(std::numeric_limits<Int>::max());
-            if (scale1 > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / scale1)
+            if (s > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / s)
                 return type(std::numeric_limits<Int>::min());
-            return type(v.mantissa_ * scale1);
+            return type(v.mantissa_ * s);
         }
 
         static constexpr type convert_second(mbfp<B2, E2, Int> v) noexcept {
@@ -200,11 +202,12 @@ namespace cdcommons::time {
                 return type(std::numeric_limits<Int>::max());
             if (v.mantissa_ == std::numeric_limits<Int>::min())
                 return type(std::numeric_limits<Int>::min());
-            if (scale2 > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / scale2)
+            constexpr Int s = static_cast<Int>(scale2);
+            if (s > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / s)
                 return type(std::numeric_limits<Int>::max());
-            if (scale2 > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / scale2)
+            if (s > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / s)
                 return type(std::numeric_limits<Int>::min());
-            return type(v.mantissa_ * scale2);
+            return type(v.mantissa_ * s);
         }
     };
 

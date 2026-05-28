@@ -27,6 +27,7 @@
 
 #pragma once
 
+#include <cdcommons/time/detail.hpp>
 #include <compare>
 #include <concepts>
 #include <limits>
@@ -138,29 +139,28 @@ namespace cdcommons::time {
     // This is the smallest rational scale s such that both (N1/D1) and (N2/D2)
     // are integer multiples of s (VWT19, Section 3.4).
     //
-    // Scale factors computed in long to avoid intermediate overflow for large
-    // denominators (e.g. nanoseconds: Den = 1 000 000 000).  A static_assert
-    // fires at instantiation if common_den overflows int.
+    // Scale factors computed in detail::next_wider_int_t<Int> — a type guaranteed
+    // strictly wider than Int on the current platform.  A static_assert fires at
+    // instantiation if common_den or a scale factor would overflow.
     template <typename A, typename B> struct rsfp_agree;
 
     template <int N1, int D1, int N2, int D2, std::signed_integral Int>
     struct rsfp_agree<rsfp<N1, D1, Int>, rsfp<N2, D2, Int>> {
       private:
+        using W = detail::next_wider_int_t<Int>;
         // Declared before scale1/scale2 so the initializers find it (GCC requires this).
-        static constexpr long cn_ = std::gcd(static_cast<long>(N1), static_cast<long>(N2));
-        static constexpr long cd_ = std::lcm(static_cast<long>(D1), static_cast<long>(D2));
+        static constexpr W cn_ = detail::gcd_t(static_cast<W>(N1), static_cast<W>(N2));
+        static constexpr W cd_ = detail::lcm_t(static_cast<W>(D1), static_cast<W>(D2));
 
-        static_assert(cn_ <= static_cast<long>(std::numeric_limits<int>::max()),
+        static_assert(cn_ <= static_cast<W>(std::numeric_limits<int>::max()),
                       "rsfp_agree: common_num overflows int — reduce Num values");
-        static_assert(cd_ <= static_cast<long>(std::numeric_limits<int>::max()),
+        static_assert(cd_ <= static_cast<W>(std::numeric_limits<int>::max()),
                       "rsfp_agree: common_den overflows int — use a smaller Den or wider types");
 
         // scale for rsfp<N,D> → rsfp<common_num, common_den>:
         //   (N/D) / (common_num/common_den) = (N * common_den) / (D * common_num)
         // Always an exact integer when common_num = gcd(N1,N2), common_den = lcm(D1,D2).
-        static constexpr long scale_factor(long N, long D) noexcept {
-            return (N * cd_) / (D * cn_);
-        }
+        static constexpr W scale_factor(W N, W D) noexcept { return (N * cd_) / (D * cn_); }
 
       public:
         static constexpr int common_num = static_cast<int>(cn_);
@@ -168,12 +168,12 @@ namespace cdcommons::time {
         using type = rsfp<common_num, common_den, Int>;
 
         // Evaluated at compile time — wrong scale factor is a build error, not a runtime surprise.
-        static constexpr long scale1 = scale_factor(N1, D1);
-        static constexpr long scale2 = scale_factor(N2, D2);
+        static constexpr W scale1 = scale_factor(static_cast<W>(N1), static_cast<W>(D1));
+        static constexpr W scale2 = scale_factor(static_cast<W>(N2), static_cast<W>(D2));
 
-        static_assert(scale1 <= static_cast<long>(std::numeric_limits<Int>::max()),
+        static_assert(scale1 <= static_cast<W>(std::numeric_limits<Int>::max()),
                       "rsfp_agree: scale1 overflows Int — use a wider Int type");
-        static_assert(scale2 <= static_cast<long>(std::numeric_limits<Int>::max()),
+        static_assert(scale2 <= static_cast<W>(std::numeric_limits<Int>::max()),
                       "rsfp_agree: scale2 overflows Int — use a wider Int type");
 
         static constexpr type convert_first(rsfp<N1, D1, Int> v) noexcept {
