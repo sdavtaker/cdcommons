@@ -56,8 +56,13 @@ namespace cdcommons::time {
 
         static constexpr decimal from_whole(Raw whole) noexcept {
             Raw acc = whole;
-            for (unsigned int i = 0; i < Scale; ++i)
+            for (unsigned int i = 0; i < Scale; ++i) {
+                if (acc > (std::numeric_limits<Raw>::max() - Raw(1)) / Raw(10))
+                    return pos_inf_value();
+                if (acc < (std::numeric_limits<Raw>::min() + Raw(1)) / Raw(10))
+                    return neg_inf_value();
                 acc = static_cast<Raw>(acc * Raw(10));
+            }
             return decimal(acc);
         }
 
@@ -74,6 +79,8 @@ namespace cdcommons::time {
                 return neg_inf_value();
             if (a.raw_ > Raw(0) && b.raw_ > std::numeric_limits<Raw>::max() - a.raw_)
                 return pos_inf_value();
+            if (a.raw_ < Raw(0) && b.raw_ < std::numeric_limits<Raw>::min() - a.raw_)
+                return neg_inf_value();
             return decimal(static_cast<Raw>(a.raw_ + b.raw_));
         }
 
@@ -89,6 +96,12 @@ namespace cdcommons::time {
             if (is_neg_inf(b))
                 return pos_inf_value();
             if (is_pos_inf(b))
+                return neg_inf_value();
+            // Subtracting a negative can overflow positive; subtracting a positive can overflow
+            // negative.
+            if (b.raw_ < Raw(0) && a.raw_ > std::numeric_limits<Raw>::max() + b.raw_)
+                return pos_inf_value();
+            if (b.raw_ > Raw(0) && a.raw_ < std::numeric_limits<Raw>::min() + b.raw_)
                 return neg_inf_value();
             return decimal(static_cast<Raw>(a.raw_ - b.raw_));
         }

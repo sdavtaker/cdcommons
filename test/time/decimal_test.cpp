@@ -106,14 +106,34 @@ TEST_CASE("decimal: addition overflow saturates to infinity", "[decimal]") {
     REQUIRE((near_max + MS3::from_scaled(0)) == near_max);
 }
 
-TEST_CASE("decimal: very negative raw saturates to neg_infinity on subtraction", "[decimal]") {
-    // lowest() is INT32_MIN + 1; subtracting a positive value underflows
+TEST_CASE("decimal: addition negative overflow saturates to neg_infinity", "[decimal]") {
     MS3 near_lowest = std::numeric_limits<MS3>::lowest();
-    // near_lowest - 1 would reach INT32_MIN (the -inf sentinel)
-    // Use subtraction: a - b where b is positive and a is near lowest
-    // near_lowest + (-1) triggers... actually test via subtraction sign flip:
-    // t - near_lowest where t is 0: 0 - (INT32_MIN+1) = -(INT32_MIN+1) which overflows
-    // Better: directly confirm lowest() is one step above -inf
-    REQUIRE(near_lowest > ms_neg_inf);
-    REQUIRE(near_lowest.raw_value() == std::numeric_limits<std::int32_t>::min() + 1);
+    // lowest() + (-2) underflows below INT32_MIN → saturate to -inf
+    REQUIRE((near_lowest + MS3::from_scaled(-2)) == ms_neg_inf);
+    // lowest() + (-1) produces INT32_MIN naturally (the -inf sentinel)
+    REQUIRE((near_lowest + MS3::from_scaled(-1)) == ms_neg_inf);
+    // lowest() + 0 stays at lowest()
+    REQUIRE((near_lowest + MS3::from_scaled(0)) == near_lowest);
+}
+
+TEST_CASE("decimal: subtraction overflow saturates", "[decimal]") {
+    MS3 near_max = std::numeric_limits<MS3>::max();
+    MS3 near_lowest = std::numeric_limits<MS3>::lowest();
+    // max() - (-2): subtracting a negative overflows upward → +inf
+    REQUIRE((near_max - MS3::from_scaled(-2)) == ms_inf);
+    // max() - (-1): produces INT32_MAX naturally (the +inf sentinel)
+    REQUIRE((near_max - MS3::from_scaled(-1)) == ms_inf);
+    // lowest() - 2: subtracting a positive overflows downward → -inf
+    REQUIRE((near_lowest - MS3::from_scaled(2)) == ms_neg_inf);
+    // lowest() - 1: produces INT32_MIN naturally (the -inf sentinel)
+    REQUIRE((near_lowest - MS3::from_scaled(1)) == ms_neg_inf);
+}
+
+TEST_CASE("decimal: from_whole overflow saturates", "[decimal]") {
+    // decimal<30> with whole=1: 10^30 far exceeds INT32_MAX → saturate to +inf
+    using BIG = cdcommons::time::decimal<30>;
+    REQUIRE(BIG::from_whole(1) == std::numeric_limits<BIG>::infinity());
+    REQUIRE(BIG::from_whole(-1) == std::numeric_limits<BIG>::neg_infinity());
+    // decimal<3> with reasonable input stays finite
+    REQUIRE(MS3::from_whole(1).raw_value() == 1000);
 }
