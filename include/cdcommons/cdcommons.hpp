@@ -28,6 +28,7 @@
 #pragma once
 
 // Convenience header — includes the full cdcommons public API.
+#include <cdcommons/time/decimal.hpp>
 #include <cdcommons/time/mbfp.hpp>
 #include <cdcommons/time/rational.hpp>
 #include <cdcommons/time/rsfp.hpp>
