@@ -155,6 +155,8 @@ namespace cdcommons::time {
             constexpr Int s = static_cast<Int>(scale1);
             if (s > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / s)
                 return type(std::numeric_limits<Int>::max());
+            if (s > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / s)
+                return type(std::numeric_limits<Int>::min() + Int(1));
             return type(v.mantissa_ * s);
         }
 
@@ -164,6 +166,8 @@ namespace cdcommons::time {
             constexpr Int s = static_cast<Int>(scale2);
             if (s > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / s)
                 return type(std::numeric_limits<Int>::max());
+            if (s > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / s)
+                return type(std::numeric_limits<Int>::min() + Int(1));
             return type(v.mantissa_ * s);
         }
     };

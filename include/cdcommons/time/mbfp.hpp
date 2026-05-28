@@ -160,12 +160,20 @@ namespace cdcommons::time {
         static constexpr type convert_first(mbfp<B1, E1, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
+            if (scale1 > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / scale1)
+                return type(std::numeric_limits<Int>::max());
+            if (scale1 > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / scale1)
+                return type(std::numeric_limits<Int>::min() + Int(1));
             return type(v.mantissa_ * scale1);
         }
 
         static constexpr type convert_second(mbfp<B2, E2, Int> v) noexcept {
             if (v.mantissa_ == std::numeric_limits<Int>::max())
                 return type(std::numeric_limits<Int>::max());
+            if (scale2 > Int(1) && v.mantissa_ > std::numeric_limits<Int>::max() / scale2)
+                return type(std::numeric_limits<Int>::max());
+            if (scale2 > Int(1) && v.mantissa_ < std::numeric_limits<Int>::min() / scale2)
+                return type(std::numeric_limits<Int>::min() + Int(1));
             return type(v.mantissa_ * scale2);
         }
     };

@@ -160,3 +160,11 @@ TEST_CASE("rsfp_agree: large finite mantissa saturates to infinity on conversion
     auto converted = Agree::convert_first(near_max);
     REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
 }
+
+TEST_CASE("rsfp_agree: very negative mantissa clamps to lowest on conversion", "[rsfp][agree]") {
+    // scale1 = 1000; Int::min()/1000 ≈ -9.2e15; anything below underflows.
+    using Agree = cdcommons::time::rsfp_agree<MS, US>;
+    MS very_negative(std::numeric_limits<long>::min() / 2L);
+    auto converted = Agree::convert_first(very_negative);
+    REQUIRE(converted == std::numeric_limits<Agree::type>::lowest());
+}

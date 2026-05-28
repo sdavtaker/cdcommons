@@ -153,6 +153,23 @@ TEST_CASE("mbfp_agree: infinity is preserved under conversion", "[mbfp][agree]")
     REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
 }
 
+TEST_CASE("mbfp_agree: large finite mantissa saturates to infinity on conversion",
+          "[mbfp][agree]") {
+    // scale1 = 1000000 (ms → ns); near_max × 1000000 overflows long — must saturate.
+    using Agree = cdcommons::time::mbfp_agree<MS, NS>;
+    MS near_max = std::numeric_limits<MS>::max();
+    auto converted = Agree::convert_first(near_max);
+    REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
+}
+
+TEST_CASE("mbfp_agree: very negative mantissa clamps to lowest on conversion", "[mbfp][agree]") {
+    // scale1 = 1000000; Int::min()/1000000 ≈ -9.2e12; anything below underflows.
+    using Agree = cdcommons::time::mbfp_agree<MS, NS>;
+    MS very_negative(std::numeric_limits<long>::min() / 2L);
+    auto converted = Agree::convert_first(very_negative);
+    REQUIRE(converted == std::numeric_limits<Agree::type>::lowest());
+}
+
 TEST_CASE("mbfp: addition overflow saturates to infinity", "[mbfp]") {
     // max() is INT_MAX - 1; adding 2 would exceed the sentinel, so it saturates.
     MS near_max = std::numeric_limits<MS>::max();
