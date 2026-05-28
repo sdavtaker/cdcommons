@@ -18,13 +18,13 @@ static const MS ms_neg_inf = std::numeric_limits<MS>::neg_infinity();
 
 TEST_CASE("mbfp: default construction is zero", "[mbfp]") {
     MS t;
-    REQUIRE(t.mantissa() == 0L);
+    REQUIRE(t.mantissa() == 0);
 }
 
 TEST_CASE("mbfp: explicit construction from mantissa", "[mbfp]") {
-    MS t(5L);
-    REQUIRE(t.mantissa() == 5L);
-    REQUIRE(t == MS(5L));
+    MS t(5);
+    REQUIRE(t.mantissa() == 5);
+    REQUIRE(t == MS(5));
 }
 
 TEST_CASE("mbfp: static type parameters", "[mbfp]") {
@@ -35,41 +35,41 @@ TEST_CASE("mbfp: static type parameters", "[mbfp]") {
 }
 
 TEST_CASE("mbfp: addition", "[mbfp]") {
-    REQUIRE(MS(3L) + MS(4L) == MS(7L));
-    REQUIRE(MS(0L) + MS(5L) == MS(5L));
-    REQUIRE(MS(100L) + MS(900L) == MS(1000L));
+    REQUIRE(MS(3) + MS(4) == MS(7));
+    REQUIRE(MS(0) + MS(5) == MS(5));
+    REQUIRE(MS(100) + MS(900) == MS(1000));
 }
 
 TEST_CASE("mbfp: subtraction", "[mbfp]") {
-    REQUIRE(MS(7L) - MS(3L) == MS(4L));
-    REQUIRE(MS(5L) - MS(5L) == MS(0L));
-    REQUIRE(MS(1000L) - MS(1L) == MS(999L));
+    REQUIRE(MS(7) - MS(3) == MS(4));
+    REQUIRE(MS(5) - MS(5) == MS(0));
+    REQUIRE(MS(1000) - MS(1) == MS(999));
 }
 
 TEST_CASE("mbfp: comparison (totally ordered)", "[mbfp]") {
-    REQUIRE(MS(1L) < MS(2L));
-    REQUIRE(MS(2L) > MS(1L));
-    REQUIRE(MS(3L) <= MS(3L));
-    REQUIRE(MS(3L) >= MS(3L));
-    REQUIRE(MS(0L) < MS(1L));
-    REQUIRE_FALSE(MS(5L) < MS(5L));
+    REQUIRE(MS(1) < MS(2));
+    REQUIRE(MS(2) > MS(1));
+    REQUIRE(MS(3) <= MS(3));
+    REQUIRE(MS(3) >= MS(3));
+    REQUIRE(MS(0) < MS(1));
+    REQUIRE_FALSE(MS(5) < MS(5));
 }
 
 TEST_CASE("mbfp: equality", "[mbfp]") {
-    REQUIRE(MS(7L) == MS(7L));
-    REQUIRE_FALSE(MS(7L) == MS(8L));
+    REQUIRE(MS(7) == MS(7));
+    REQUIRE_FALSE(MS(7) == MS(8));
 }
 
 TEST_CASE("mbfp: infinity sentinel from numeric_limits", "[mbfp]") {
     REQUIRE(std::numeric_limits<MS>::has_infinity);
-    REQUIRE(ms_inf.mantissa() == std::numeric_limits<long>::max());
+    REQUIRE(ms_inf.mantissa() == std::numeric_limits<std::int32_t>::max());
     REQUIRE(ms_inf == std::numeric_limits<MS>::infinity());
     REQUIRE(ms_neg_inf == std::numeric_limits<MS>::neg_infinity());
-    REQUIRE(ms_neg_inf.mantissa() == std::numeric_limits<long>::min());
+    REQUIRE(ms_neg_inf.mantissa() == std::numeric_limits<std::int32_t>::min());
 }
 
 TEST_CASE("mbfp: infinity arithmetic propagation", "[mbfp]") {
-    MS t(3L);
+    MS t(3);
     REQUIRE(ms_inf + t == ms_inf);
     REQUIRE(t + ms_inf == ms_inf);
     REQUIRE(ms_inf - t == ms_inf);
@@ -91,8 +91,8 @@ TEST_CASE("mbfp: undefined infinity arithmetic throws domain_error", "[mbfp]") {
 }
 
 TEST_CASE("mbfp: infinity comparison", "[mbfp]") {
-    REQUIRE(MS(999999999L) < ms_inf);
-    REQUIRE(ms_inf > MS(0L));
+    REQUIRE(MS(999999999) < ms_inf);
+    REQUIRE(ms_inf > MS(0));
     REQUIRE(ms_inf == ms_inf);
 }
 
@@ -100,25 +100,25 @@ TEST_CASE("mbfp: exact decimal accumulation (VDW14 scenario)", "[mbfp]") {
     // Adding 1 ms ten times must give exactly 10 ms.
     // Floating-point 0.001 + 0.001 + ... accumulates rounding error; mbfp<10,-3> does not.
     MS acc;
-    const MS step(1L);
+    const MS step(1);
     for (int i = 0; i < 10; ++i)
         acc = acc + step;
-    REQUIRE(acc == MS(10L));
+    REQUIRE(acc == MS(10));
 }
 
 TEST_CASE("mbfp: exact binary accumulation", "[mbfp]") {
     // 1024 steps of 2^-10 s = 1 s (mantissa 1024 × 2^-10 = 1).
     BIN10 acc;
-    const BIN10 step(1L);
+    const BIN10 step(1);
     for (int i = 0; i < 1024; ++i)
         acc = acc + step;
-    REQUIRE(acc == BIN10(1024L));
+    REQUIRE(acc == BIN10(1024));
 }
 
 TEST_CASE("mbfp: base-3 exact representation (inaccessible to rational)", "[mbfp]") {
     // 1 × 3^-70 cannot be expressed as p/q with |p|, |q| fitting in 64-bit integers
     // (3^70 ≈ 2.5 × 10^33 > INT64_MAX ≈ 9.2 × 10^18).
-    // mbfp<3,-70> represents it exactly as mantissa=1.
+    // mbfp<3,-70,long> represents it exactly as mantissa=1.
     BASE3 tiny(1L);
     BASE3 zero;
     REQUIRE(tiny > zero);
@@ -133,15 +133,15 @@ TEST_CASE("mbfp_agree: same base, different exponent", "[mbfp][agree]") {
     static_assert(Agree::common_base == 10);
     static_assert(Agree::common_exp == -9);
 
-    MS five_ms(5L);          // 5 × 10^-3 s = 5 000 000 × 10^-9 s
-    NS two_hundred_ns(200L); // 200 × 10^-9 s
+    MS five_ms(5);          // 5 × 10^-3 s = 5 000 000 × 10^-9 s
+    NS two_hundred_ns(200); // 200 × 10^-9 s
 
     auto a = Agree::convert_first(five_ms);
     auto b = Agree::convert_second(two_hundred_ns);
 
-    REQUIRE(a.mantissa() == 5000000L);
-    REQUIRE(b.mantissa() == 200L);
-    REQUIRE((a + b).mantissa() == 5000200L);
+    REQUIRE(a.mantissa() == 5000000);
+    REQUIRE(b.mantissa() == 200);
+    REQUIRE((a + b).mantissa() == 5000200);
 }
 
 // Agreement: decimal ms + binary (base-2) 1/1024-second steps
@@ -152,14 +152,14 @@ TEST_CASE("mbfp_agree: different base, different exponent", "[mbfp][agree]") {
     static_assert(Agree::common_exp == -10);
 
     // 1 ms = 1 × 10^-3 s; in common type (base 10, exp -10): 1 × 10^7 = 10 000 000
-    MS one_ms(1L);
+    MS one_ms(1);
     auto converted = Agree::convert_first(one_ms);
-    REQUIRE(converted.mantissa() == 10000000L);
+    REQUIRE(converted.mantissa() == 10000000);
 
     // 1 × 2^-10 in base 10 at exp -10: (10/2)^10 = 5^10 = 9 765 625
-    BIN10 one_unit(1L);
+    BIN10 one_unit(1);
     auto converted2 = Agree::convert_second(one_unit);
-    REQUIRE(converted2.mantissa() == 9765625L);
+    REQUIRE(converted2.mantissa() == 9765625);
 }
 
 // Agreement: infinity converts to infinity
@@ -172,7 +172,7 @@ TEST_CASE("mbfp_agree: infinity is preserved under conversion", "[mbfp][agree]")
 
 TEST_CASE("mbfp_agree: large finite mantissa saturates to infinity on conversion",
           "[mbfp][agree]") {
-    // scale1 = 1000000 (ms → ns); near_max × 1000000 overflows long — must saturate.
+    // scale1 = 1000000 (ms → ns); near_max × 1000000 overflows int32_t — must saturate.
     using Agree = cdcommons::time::mbfp_agree<MS, NS>;
     MS near_max = std::numeric_limits<MS>::max();
     auto converted = Agree::convert_first(near_max);
@@ -181,21 +181,21 @@ TEST_CASE("mbfp_agree: large finite mantissa saturates to infinity on conversion
 
 TEST_CASE("mbfp_agree: very negative mantissa saturates to neg_infinity on conversion",
           "[mbfp][agree]") {
-    // scale1 = 1000000; Int::min()/1000000 ≈ -9.2e12; anything below underflows to -inf.
+    // scale1 = 1000000; INT32_MIN/1000000 ≈ -2.1e3; anything below underflows to -inf.
     using Agree = cdcommons::time::mbfp_agree<MS, NS>;
-    MS very_negative(std::numeric_limits<long>::min() / 2L);
+    MS very_negative(std::numeric_limits<std::int32_t>::min() / 2);
     auto converted = Agree::convert_first(very_negative);
     REQUIRE(converted == std::numeric_limits<Agree::type>::neg_infinity());
 }
 
 TEST_CASE("mbfp: addition overflow saturates to infinity", "[mbfp]") {
-    // max() is INT_MAX - 1; adding 2 would exceed the sentinel, so it saturates.
+    // max() is INT32_MAX - 1; adding 2 would exceed the sentinel, so it saturates.
     MS near_max = std::numeric_limits<MS>::max();
-    REQUIRE((near_max + MS(2L)) == ms_inf);
+    REQUIRE((near_max + MS(2)) == ms_inf);
     // Adding 1 to max() also overflows (max+1 == sentinel == infinity).
-    REQUIRE((near_max + MS(1L)) == ms_inf);
+    REQUIRE((near_max + MS(1)) == ms_inf);
     // Adding 0 is fine — stays at max().
-    REQUIRE((near_max + MS(0L)) == near_max);
+    REQUIRE((near_max + MS(0)) == near_max);
 }
 
 // scale1/scale2 overflow is a compile-time error — verified here by confirming that
@@ -203,21 +203,21 @@ TEST_CASE("mbfp: addition overflow saturates to infinity", "[mbfp]") {
 TEST_CASE("mbfp_agree: scale factors are correct compile-time constants", "[mbfp][agree]") {
     using Agree = cdcommons::time::mbfp_agree<MS, NS>;
     // scale1: convert ms(base=10,exp=-3) → ns(base=10,exp=-9): factor = 10^6
-    REQUIRE(Agree::scale1 == 1000000L);
+    REQUIRE(Agree::scale1 == 1000000);
     // scale2: convert ns(base=10,exp=-9) → ns(base=10,exp=-9): factor = 1
-    REQUIRE(Agree::scale2 == 1L);
+    REQUIRE(Agree::scale2 == 1);
 
     using Agree2 = cdcommons::time::mbfp_agree<MS, BIN10>;
     // scale1: ms(10,-3) → common(10,-10): (10/10)^3 × 10^7 = 1 × 10^7
-    REQUIRE(Agree2::scale1 == 10000000L);
+    REQUIRE(Agree2::scale1 == 10000000);
     // scale2: bin(2,-10) → common(10,-10): (10/2)^10 × 10^0 = 5^10
-    REQUIRE(Agree2::scale2 == 9765625L);
+    REQUIRE(Agree2::scale2 == 9765625);
 }
 
 // MBFP vs rational: MBFP covers numbers rational cannot (with fixed Int width)
 // and rational covers numbers MBFP cannot (arbitrary p/q).
 TEST_CASE("mbfp vs rational: disjoint representable sets", "[mbfp]") {
-    // 3^-70 is exactly representable in mbfp<3,-70> as mantissa=1.
+    // 3^-70 is exactly representable in mbfp<3,-70,long> as mantissa=1.
     // It cannot be exactly stored in rational<long> because 3^70 > LONG_MAX.
     BASE3 base3_tiny(1L); // exact
     REQUIRE(base3_tiny.mantissa() == 1L);
@@ -226,6 +226,6 @@ TEST_CASE("mbfp vs rational: disjoint representable sets", "[mbfp]") {
     // mbfp<Base, Exp> with integer mantissa (7 is coprime to every power-of-10,
     // power-of-2, and power-of-3).  This is a design trade-off, not a bug.
     // The closest ms-resolution value is 143 × 10^-3 (rounding up from 0.1428…).
-    MS approx_seventh(143L); // 143 × 10^-3 ≈ 0.143 ≈ 1/7, but not exact
-    REQUIRE(approx_seventh.mantissa() == 143L);
+    MS approx_seventh(143); // 143 × 10^-3 ≈ 0.143 ≈ 1/7, but not exact
+    REQUIRE(approx_seventh.mantissa() == 143);
 }

@@ -35,28 +35,9 @@
 
 namespace cdcommons::time::detail {
 
-    // Euclidean gcd/lcm — unconstrained so they work with __int128_t, which does
-    // not satisfy std::integral in strict C++23 even on GCC/Clang.
-    template <typename T> constexpr T gcd_t(T a, T b) noexcept {
-        a = (a < T(0)) ? -a : a;
-        b = (b < T(0)) ? -b : b;
-        while (b) {
-            T t = b;
-            b = a % b;
-            a = t;
-        }
-        return a;
-    }
-
-    template <typename T> constexpr T lcm_t(T a, T b) noexcept {
-        T g = gcd_t(a, b);
-        return g == T(0) ? T(0) : (a / g) * b;
-    }
-
     // Integer power: base^exp (exp >= 0).  Throws on overflow — which surfaces as a
     // compile-time failure when called from a static constexpr initializer.
-    // Unconstrained so it works with __int128_t.
-    template <typename Int> constexpr Int ipow(Int base, int exp) {
+    template <std::signed_integral Int> constexpr Int ipow(Int base, int exp) {
         Int r = Int(1);
         for (int i = 0; i < exp; ++i) {
             if (base > Int(1) && r > std::numeric_limits<Int>::max() / base)
@@ -70,25 +51,22 @@ namespace cdcommons::time::detail {
     // Maps a signed integer type to the next-wider exact-width signed type.
     // The decision chain is sizeof-based so it is portable across platforms where
     // int/long/long long have varying widths (e.g. 32-bit long on Windows).
-    // On compilers that provide __int128 (GCC, Clang) the 64-bit slot maps to
-    // __int128_t; on others the slot maps to void and the static_assert fires —
-    // use a narrower Int (e.g. int32_t) or switch to a compiler with __int128.
+    //
+    // Valid range: int8_t → int16_t → int32_t → int64_t.
+    // Int must be at most 32 bits wide; int64_t is used as the common intermediate
+    // type so that all scale-factor arithmetic stays within the standard library.
+    // Use int32_t (or a narrower type) as the mantissa Int parameter.
     template <std::signed_integral Int> struct next_wider_int {
         using type = std::conditional_t<
             (sizeof(Int) < sizeof(std::int16_t)), std::int16_t,
             std::conditional_t<
                 (sizeof(Int) < sizeof(std::int32_t)), std::int32_t,
-                std::conditional_t<(sizeof(Int) < sizeof(std::int64_t)), std::int64_t,
-#if defined(__SIZEOF_INT128__)
-                                   __int128_t
-#else
-                                   void
-#endif
-                                   >>>;
+                std::conditional_t<(sizeof(Int) < sizeof(std::int64_t)), std::int64_t, void>>>;
         static_assert(!std::is_same_v<type, void>,
-                      "agree: no wider integer type is available for safe intermediate "
-                      "arithmetic; use a narrower Int (e.g. int32_t) or a compiler "
-                      "that supports __int128");
+                      "agree: Int must be at most 32 bits wide (e.g. int32_t); "
+                      "int64_t is reserved as the intermediate type for scale-factor "
+                      "arithmetic — using int64_t as Int leaves no room for a safe "
+                      "wider intermediate");
     };
 
     template <std::signed_integral Int> using next_wider_int_t = typename next_wider_int<Int>::type;

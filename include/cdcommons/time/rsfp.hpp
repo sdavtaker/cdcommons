@@ -53,7 +53,7 @@ namespace cdcommons::time {
     // positive overflow; rsfp_agree conversion saturates to −∞ on negative overflow.
     //
     // For coupling models with different scale factors use rsfp_agree<A, B>.
-    template <int Num, int Den, std::signed_integral Int = long> class rsfp {
+    template <int Num, int Den, std::signed_integral Int = std::int32_t> class rsfp {
         static_assert(Num > 0, "rsfp: Num must be positive");
         static_assert(Den > 0, "rsfp: Den must be positive");
 
@@ -149,8 +149,8 @@ namespace cdcommons::time {
       private:
         using W = detail::next_wider_int_t<Int>;
         // Declared before scale1/scale2 so the initializers find it (GCC requires this).
-        static constexpr W cn_ = detail::gcd_t(static_cast<W>(N1), static_cast<W>(N2));
-        static constexpr W cd_ = detail::lcm_t(static_cast<W>(D1), static_cast<W>(D2));
+        static constexpr W cn_ = std::gcd(static_cast<W>(N1), static_cast<W>(N2));
+        static constexpr W cd_ = std::lcm(static_cast<W>(D1), static_cast<W>(D2));
 
         static_assert(cn_ <= static_cast<W>(std::numeric_limits<int>::max()),
                       "rsfp_agree: common_num overflows int — reduce Num values");

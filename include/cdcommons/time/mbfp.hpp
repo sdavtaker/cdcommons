@@ -31,6 +31,7 @@
 #include <compare>
 #include <concepts>
 #include <limits>
+#include <numeric>
 #include <stdexcept>
 
 namespace cdcommons::time {
@@ -50,7 +51,7 @@ namespace cdcommons::time {
     // To combine values from two atomic models with different scale-factors,
     // use mbfp_agree<A, B>. Only non-positive exponents are supported for
     // exact integer conversion (the typical case for DES time fractions).
-    template <int Base, int Exp, std::signed_integral Int = long> class mbfp {
+    template <int Base, int Exp, std::signed_integral Int = std::int32_t> class mbfp {
         static_assert(Base >= 2, "mbfp: base must be >= 2");
 
       public:
@@ -151,7 +152,7 @@ namespace cdcommons::time {
 
         // Compute lcm in W to avoid int overflow when bases are large.
         // Declared before scale_factor so GCC finds it during constexpr evaluation.
-        static constexpr W common_base_w_ = detail::lcm_t(static_cast<W>(B1), static_cast<W>(B2));
+        static constexpr W common_base_w_ = std::lcm(static_cast<W>(B1), static_cast<W>(B2));
         static_assert(common_base_w_ <= static_cast<W>(std::numeric_limits<int>::max()),
                       "mbfp_agree: common_base overflows int — use smaller base values");
 
