@@ -77,6 +77,9 @@ namespace cdcommons::time {
         constexpr mbfp operator+(const mbfp &rhs) const noexcept {
             if (is_inf(*this) || is_inf(rhs))
                 return inf_value();
+            // Overflow on non-negative time addition saturates to infinity.
+            if (mantissa_ > Int(0) && rhs.mantissa_ > std::numeric_limits<Int>::max() - mantissa_)
+                return inf_value();
             return mbfp(mantissa_ + rhs.mantissa_);
         }
 
@@ -140,7 +143,12 @@ namespace cdcommons::time {
             const int abs_e = -E;
             const int abs_ce = -common_exp;
             const Int k = Int(common_base) / Int(B);
-            return detail::ipow(k, abs_e) * detail::ipow(Int(common_base), abs_ce - abs_e);
+            const Int a = detail::ipow(k, abs_e);
+            const Int b = detail::ipow(Int(common_base), abs_ce - abs_e);
+            if (a > Int(1) && b > std::numeric_limits<Int>::max() / a)
+                throw std::overflow_error(
+                    "cdcommons::time::mbfp: scale factor overflow — use a wider Int type");
+            return a * b;
         }
 
       public:

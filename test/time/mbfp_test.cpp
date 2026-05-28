@@ -153,6 +153,16 @@ TEST_CASE("mbfp_agree: infinity is preserved under conversion", "[mbfp][agree]")
     REQUIRE(converted == std::numeric_limits<Agree::type>::infinity());
 }
 
+TEST_CASE("mbfp: addition overflow saturates to infinity", "[mbfp]") {
+    // max() is INT_MAX - 1; adding 2 would exceed the sentinel, so it saturates.
+    MS near_max = std::numeric_limits<MS>::max();
+    REQUIRE((near_max + MS(2L)) == ms_inf);
+    // Adding 1 to max() also overflows (max+1 == sentinel == infinity).
+    REQUIRE((near_max + MS(1L)) == ms_inf);
+    // Adding 0 is fine — stays at max().
+    REQUIRE((near_max + MS(0L)) == near_max);
+}
+
 // scale1/scale2 overflow is a compile-time error — verified here by confirming that
 // a valid agreement compiles and produces the expected scale values.
 TEST_CASE("mbfp_agree: scale factors are correct compile-time constants", "[mbfp][agree]") {
@@ -178,9 +188,9 @@ TEST_CASE("mbfp vs rational: disjoint representable sets", "[mbfp]") {
     REQUIRE(base3_tiny.mantissa() == 1L);
 
     // 1/7 is exactly rational<long>(1,7) but is NOT representable in any
-    // mbfp<Base, Exp> with integer mantissa (7 is coprime to every power-of-10
-    // or power-of-2 or power-of-3).  This is a design trade-off, not a bug.
-    // We just document it here by verifying our mbfp gives 0 for the closest.
-    MS approx_seventh(142L); // 142 × 10^-3 ≈ 0.142 ≈ 1/7, but not exact
-    REQUIRE(approx_seventh.mantissa() == 142L);
+    // mbfp<Base, Exp> with integer mantissa (7 is coprime to every power-of-10,
+    // power-of-2, and power-of-3).  This is a design trade-off, not a bug.
+    // The closest ms-resolution value is 143 × 10^-3 (rounding up from 0.1428…).
+    MS approx_seventh(143L); // 143 × 10^-3 ≈ 0.143 ≈ 1/7, but not exact
+    REQUIRE(approx_seventh.mantissa() == 143L);
 }
