@@ -4,10 +4,10 @@
 #include <limits>
 #include <stdexcept>
 
-// 1 ms resolution: raw=1 → 0.001 s
-using MS3 = cdcommons::time::decimal<3>;
-// 1 µs resolution
-using US6 = cdcommons::time::decimal<6>;
+// 1 ms resolution: raw=1 → 1 × 10^-3 s
+using MS3 = cdcommons::time::decimal<-3>;
+// 1 µs resolution: raw=1 → 1 × 10^-6 s
+using US6 = cdcommons::time::decimal<-6>;
 
 static const MS3 ms_inf = std::numeric_limits<MS3>::infinity();
 static const MS3 ms_neg_inf = std::numeric_limits<MS3>::neg_infinity();
@@ -32,8 +32,8 @@ TEST_CASE("decimal: from_whole construction", "[decimal]") {
 }
 
 TEST_CASE("decimal: static type parameters", "[decimal]") {
-    REQUIRE(MS3::scale == 3);
-    REQUIRE(US6::scale == 6);
+    REQUIRE(MS3::exponent == -3);
+    REQUIRE(US6::exponent == -6);
 }
 
 TEST_CASE("decimal: addition", "[decimal]") {
@@ -130,10 +130,10 @@ TEST_CASE("decimal: subtraction overflow saturates", "[decimal]") {
 }
 
 TEST_CASE("decimal: from_whole overflow saturates", "[decimal]") {
-    // decimal<30> with whole=1: 10^30 far exceeds INT32_MAX → saturate to +inf
-    using BIG = cdcommons::time::decimal<30>;
+    // decimal<-30>: 10^30 far exceeds INT32_MAX → saturate to +inf
+    using BIG = cdcommons::time::decimal<-30>;
     REQUIRE(BIG::from_whole(1) == std::numeric_limits<BIG>::infinity());
     REQUIRE(BIG::from_whole(-1) == std::numeric_limits<BIG>::neg_infinity());
-    // decimal<3> with reasonable input stays finite
+    // decimal<-3> with reasonable input stays finite
     REQUIRE(MS3::from_whole(1).raw_value() == 1000);
 }

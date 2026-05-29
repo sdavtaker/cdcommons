@@ -38,17 +38,20 @@ namespace cdcommons::time {
 
     // Fixed-point decimal DEVS time type.
     //
-    // Represents values of the form  raw / 10^Scale  where raw is a signed integer.
-    // Scale is a compile-time constant; resolution is 10^-Scale seconds.
-    // Example: decimal<3> stores milliseconds as raw integers (raw=1 → 0.001 s).
+    // Represents values of the form  raw × 10^Exp  where raw is a signed integer.
+    // Exp is a compile-time non-positive integer (e.g. -3 for milliseconds, -6 for microseconds).
+    // This matches the exponent convention of mbfp<Base,Exp>: negative = sub-second resolution.
     //
     // Sentinels: +∞ = std::numeric_limits<Raw>::max()
     //            −∞ = std::numeric_limits<Raw>::min()
     // Both sentinels propagate through arithmetic. Addition saturates to +∞ on
     // positive overflow. inf ± inf with opposing signs throws std::domain_error.
-    template <unsigned int Scale, std::signed_integral Raw = std::int32_t> struct decimal {
+    template <int Exp, std::signed_integral Raw = std::int32_t> struct decimal {
+        static_assert(Exp <= 0, "decimal: Exp must be <= 0 (e.g. -3 for milliseconds, "
+                                "-6 for microseconds); use rsfp or mbfp for positive exponents");
+
         using raw_type = Raw;
-        static constexpr unsigned int scale = Scale;
+        static constexpr int exponent = Exp;
 
         constexpr decimal() = default;
 
@@ -56,7 +59,7 @@ namespace cdcommons::time {
 
         static constexpr decimal from_whole(Raw whole) noexcept {
             Raw acc = whole;
-            for (unsigned int i = 0; i < Scale; ++i) {
+            for (int i = 0; i < -Exp; ++i) {
                 if (acc > (std::numeric_limits<Raw>::max() - Raw(1)) / Raw(10))
                     return pos_inf_value();
                 if (acc < (std::numeric_limits<Raw>::min() + Raw(1)) / Raw(10))
@@ -129,10 +132,10 @@ namespace cdcommons::time {
 
 } // namespace cdcommons::time
 
-// Partial specialization of std::numeric_limits for cdcommons::time::decimal<Scale,Raw>.
+// Partial specialization of std::numeric_limits for cdcommons::time::decimal<Exp,Raw>.
 namespace std {
-    template <unsigned int Scale, std::signed_integral Raw>
-    struct numeric_limits<cdcommons::time::decimal<Scale, Raw>> {
+    template <int Exp, std::signed_integral Raw>
+    struct numeric_limits<cdcommons::time::decimal<Exp, Raw>> {
         static constexpr bool is_specialized = true;
         static constexpr bool is_signed = true;
         static constexpr bool is_integer = false;
@@ -149,12 +152,12 @@ namespace std {
         static constexpr int digits = 0;
         static constexpr int digits10 = 0;
         static constexpr int max_digits10 = 0;
-        static constexpr int min_exponent = 0;
+        static constexpr int min_exponent = Exp;
         static constexpr int min_exponent10 = 0;
-        static constexpr int max_exponent = 0;
+        static constexpr int max_exponent = Exp;
         static constexpr int max_exponent10 = 0;
 
-        using T = cdcommons::time::decimal<Scale, Raw>;
+        using T = cdcommons::time::decimal<Exp, Raw>;
 
         static constexpr T infinity() noexcept {
             return T::from_scaled(numeric_limits<Raw>::max());
