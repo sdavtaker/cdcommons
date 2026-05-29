@@ -13,3 +13,7 @@ add_test(NAME cdcommons_mbfp_test COMMAND cdcommons_mbfp_test)
 add_executable(cdcommons_rsfp_test time/rsfp_test.cpp)
 target_link_libraries(cdcommons_rsfp_test PRIVATE cdcommons Catch2::Catch2WithMain)
 add_test(NAME cdcommons_rsfp_test COMMAND cdcommons_rsfp_test)
+
+add_executable(cdcommons_decimal_test time/decimal_test.cpp)
+target_link_libraries(cdcommons_decimal_test PRIVATE cdcommons Catch2::Catch2WithMain)
+add_test(NAME cdcommons_decimal_test COMMAND cdcommons_decimal_test)
