@@ -39,16 +39,16 @@ namespace cdcommons::time {
     // Fixed-point decimal DEVS time type.
     //
     // Represents values of the form  raw × 10^Exp  where raw is a signed integer.
-    // Exp is a compile-time non-positive integer (e.g. -3 for milliseconds, -6 for microseconds).
-    // This matches the exponent convention of mbfp<Base,Exp>: negative = sub-second resolution.
+    // Exp is a compile-time integer matching the mbfp<Base,Exp> convention:
+    //   negative = sub-second resolution  (e.g. -3 ms, -9 ns)
+    //   zero     = 1-second resolution
+    //   positive = super-second resolution (e.g. +3 ks, +9 Gs — useful for planetary simulation)
     //
     // Sentinels: +∞ = std::numeric_limits<Raw>::max()
     //            −∞ = std::numeric_limits<Raw>::min()
     // Both sentinels propagate through arithmetic. Addition saturates to +∞ on
     // positive overflow. inf ± inf with opposing signs throws std::domain_error.
     template <int Exp, std::signed_integral Raw = std::int32_t> struct decimal {
-        static_assert(Exp <= 0, "decimal: Exp must be <= 0 (e.g. -3 for milliseconds, "
-                                "-6 for microseconds); use rsfp or mbfp for positive exponents");
 
         using raw_type = Raw;
         static constexpr int exponent = Exp;
