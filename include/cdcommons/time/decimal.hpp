@@ -106,8 +106,8 @@ namespace cdcommons::time {
             return decimal(static_cast<Raw>(a.raw_ - b.raw_));
         }
 
-        friend constexpr auto operator<=>(decimal a, decimal b) noexcept = default;
-        friend constexpr bool operator==(decimal a, decimal b) noexcept = default;
+        constexpr auto operator<=>(const decimal &rhs) const noexcept { return raw_ <=> rhs.raw_; }
+        constexpr bool operator==(const decimal &rhs) const noexcept { return raw_ == rhs.raw_; }
 
       private:
         Raw raw_{0};
